@@ -1,0 +1,20 @@
+# Android
+android-app/.gradle/
+android-app/build/
+android-app/app/build/
+android-app/local.properties
+*.iml
+.idea/
+
+# macOS
+macos-agent/.build/
+macos-agent/Package.resolved
+*.xcuserdata
+*.xcworkspace
+
+# General
+.DS_Store
+*.apk
+*.aab
+*.keystore
+*.log
