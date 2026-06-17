@@ -13,6 +13,8 @@ enum MessageType: UInt8 {
     case handshakeReply = 0x0A
     case mouseMoveAbsolute = 0x0B
     case charInput = 0x0C
+    case auth = 0x0D
+    case authResult = 0x0E
 }
 
 struct Message {
@@ -49,17 +51,22 @@ extension Message {
         return Message(type: .handshake, payload: payload)
     }
 
-    static func handshakeReply(screenWidth: Float, screenHeight: Float) -> Message {
-        var data = Data(capacity: 8)
+    static func handshakeReply(screenWidth: Float, screenHeight: Float, authRequired: Bool = false) -> Message {
+        var data = Data(capacity: 9)
         var w = screenWidth.bitPattern.bigEndian
         var h = screenHeight.bitPattern.bigEndian
         data.append(Data(bytes: &w, count: 4))
         data.append(Data(bytes: &h, count: 4))
+        data.append(authRequired ? 1 : 0)
         return Message(type: .handshakeReply, payload: data)
     }
 
     static func keepAlive() -> Message {
         return Message(type: .keepAlive, payload: Data())
+    }
+
+    static func authResult(success: Bool) -> Message {
+        return Message(type: .authResult, payload: Data([success ? 1 : 0]))
     }
 
     static func videoFrame(_ h264Data: Data) -> Message {
@@ -90,6 +97,13 @@ extension Message {
     func parseCharInput() -> String? {
         guard type == .charInput else { return nil }
         return String(data: payload, encoding: .utf8)
+    }
+
+    func parseAuth() -> (login: String, password: String)? {
+        guard type == .auth, let str = String(data: payload, encoding: .utf8) else { return nil }
+        let parts = str.split(separator: ":", maxSplits: 1)
+        guard parts.count == 2 else { return nil }
+        return (String(parts[0]), String(parts[1]))
     }
 
     func parseKeyCode() -> UInt16? {

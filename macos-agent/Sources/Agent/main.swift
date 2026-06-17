@@ -5,22 +5,52 @@ extension Data {
     var hex: String { map { String(format: "%02x", $0) }.joined() }
 }
 
+// MARK: - CLI
+
+if CommandLine.arguments.contains("--setup-auth") {
+    print("Enter login: ", terminator: "")
+    let login = readLine() ?? ""
+    print("Enter password: ", terminator: "")
+    let password = readLine() ?? ""
+    do {
+        try AuthManager.setup(login: login, password: password)
+        print("✅ Auth credentials saved")
+    } catch {
+        print("❌ Failed to save: \(error)")
+    }
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--clear-auth") {
+    do {
+        try AuthManager.clear()
+        print("✅ Auth config removed")
+    } catch {
+        print("❌ Failed to clear: \(error)")
+    }
+    exit(0)
+}
+
 let server = Server(port: 9090)
 let input = InputController()
 var screenCapture: ScreenCapture?
 var connectedClients = Set<UUID>()
+var pendingAuth = Set<UUID>()
+let authEnabled = AuthManager.isAuthEnabled()
 
 // MARK: - Server Events
 
 server.onConnection = { id in
     connectedClients.insert(id)
     print("📱 Client connected: \(id.uuidString.prefix(8))...")
+    if authEnabled { print("🔐 Auth required") }
 
     server.send(Message.handshake(), to: id)
 }
 
 server.onDisconnection = { id in
     connectedClients.remove(id)
+    pendingAuth.remove(id)
     print("📱 Client disconnected: \(id.uuidString.prefix(8))...")
 
     if connectedClients.isEmpty {
@@ -37,12 +67,36 @@ server.onMessage = { msg, id in
         let videoSize = ScreenCapture.videoSize()
         input.videoWidth = videoSize.width
         input.videoHeight = videoSize.height
-        server.send(Message.handshakeReply(screenWidth: Float(videoSize.width), screenHeight: Float(videoSize.height)), to: id)
-        startCaptureIfNeeded()
+        server.send(Message.handshakeReply(
+            screenWidth: Float(videoSize.width),
+            screenHeight: Float(videoSize.height),
+            authRequired: authEnabled
+        ), to: id)
+        if authEnabled {
+            pendingAuth.insert(id)
+        } else {
+            startCaptureIfNeeded()
+        }
 
     case .handshakeReply:
         print("📩 handshakeReply")
-        startCaptureIfNeeded()
+        if !pendingAuth.contains(id) {
+            startCaptureIfNeeded()
+        }
+
+    case .auth:
+        if let (login, password) = msg.parseAuth() {
+            let ok = AuthManager.validate(login: login, password: password)
+            server.send(Message.authResult(success: ok), to: id)
+            if ok {
+                pendingAuth.remove(id)
+                startCaptureIfNeeded()
+                print("🔐 Client authenticated: \(login)")
+            } else {
+                print("🔐 Auth FAILED for login=\(login)")
+                server.disconnect(id)
+            }
+        }
 
     case .mouseMove:
         if let (dx, dy) = msg.parseMouseMove() {
@@ -134,7 +188,7 @@ do {
     print("│  Tailscale: \(tailscaleIP.padding(toLength: 16, withPad: " ", startingAt: 0)):9090       │")
     print("│  Local:     \(localIP.padding(toLength: 16, withPad: " ", startingAt: 0)):9090       │")
     print("│  Bonjour:   _remotecontrol._tcp          │")
-    print("└──────────────────────────────────────────┘")
+    print("│  Auth:      \(authEnabled ? "enabled" : "disabled")                    │")
     print("Waiting for connections...")
 
     dispatchMain()

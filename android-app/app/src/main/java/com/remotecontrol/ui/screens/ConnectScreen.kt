@@ -40,10 +40,14 @@ import com.remotecontrol.viewmodel.ConnectionState
 fun ConnectScreen(
     host: String,
     port: String,
+    login: String,
+    password: String,
     connectionState: ConnectionState,
     errorMessage: String,
     onHostChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
+    onLoginChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
     onConnect: () -> Unit
 ) {
     Box(
@@ -135,6 +139,46 @@ fun ConnectScreen(
                             unfocusedTextColor = BinanceTextPrimary,
                         ),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = login,
+                        onValueChange = onLoginChange,
+                        label = { Text("Login") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BinancePrimary,
+                            unfocusedBorderColor = BinanceSurfaceVariant,
+                            focusedLabelColor = BinancePrimary,
+                            unfocusedLabelColor = BinanceTextSecondary,
+                            cursorColor = BinancePrimary,
+                            focusedTextColor = BinanceTextPrimary,
+                            unfocusedTextColor = BinanceTextPrimary,
+                        ),
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = onPasswordChange,
+                        label = { Text("Password") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BinancePrimary,
+                            unfocusedBorderColor = BinanceSurfaceVariant,
+                            focusedLabelColor = BinancePrimary,
+                            unfocusedLabelColor = BinanceTextSecondary,
+                            cursorColor = BinancePrimary,
+                            focusedTextColor = BinanceTextPrimary,
+                            unfocusedTextColor = BinanceTextPrimary,
+                        ),
                     )
                 }
             }

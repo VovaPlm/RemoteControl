@@ -30,6 +30,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var statusMessage by mutableStateOf("")
     var serverHost by mutableStateOf("")
     var serverPort by mutableStateOf("9090")
+    var login by mutableStateOf("")
+    var password by mutableStateOf("")
     var errorMessage by mutableStateOf("")
     var screenWidth by mutableStateOf(1920f)
     var screenHeight by mutableStateOf(1080f)
@@ -38,6 +40,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val prefs = getApplication<Application>().getSharedPreferences("remote_control", Context.MODE_PRIVATE)
         serverHost = prefs.getString("host", "") ?: ""
         serverPort = prefs.getString("port", "9090") ?: "9090"
+        login = prefs.getString("login", "") ?: ""
+        password = prefs.getString("password", "") ?: ""
     }
 
     private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -96,9 +100,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     createCodec()
                 }
             }
+            onAuthResult = { ok ->
+                if (!ok) {
+                    mainHandler.post {
+                        errorMessage = "Authentication failed"
+                        disconnect()
+                    }
+                }
+            }
         }
 
-        client?.connect(serverHost.trim(), serverPort.trim().toIntOrNull() ?: 9090)
+        client?.connect(serverHost.trim(), serverPort.trim().toIntOrNull() ?: 9090, login, password)
     }
 
     private fun saveServer() {
@@ -106,6 +118,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit()
             .putString("host", serverHost.trim())
             .putString("port", serverPort.trim())
+            .putString("login", login.trim())
+            .putString("password", password.trim())
             .apply()
     }
 

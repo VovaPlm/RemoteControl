@@ -17,7 +17,9 @@ enum class MessageType(val id: UByte) {
     HANDSHAKE(0x09u),
     HANDSHAKE_REPLY(0x0Au),
     MOUSE_MOVE_ABSOLUTE(0x0Bu),
-    CHAR_INPUT(0x0Cu);
+    CHAR_INPUT(0x0Cu),
+    AUTH(0x0Du),
+    AUTH_RESULT(0x0Eu);
 
     companion object {
         private val map = entries.associateBy { it.id }
@@ -54,7 +56,21 @@ data class Message(
 
         fun handshake() = Message(MessageType.HANDSHAKE, "RemoteControl v1".toByteArray())
 
-        fun handshakeReply() = Message(MessageType.HANDSHAKE_REPLY, "OK".toByteArray())
+        fun handshakeReply(w: Float = 0f, h: Float = 0f, authRequired: Boolean = false): Message {
+            val buf = ByteBuffer.allocate(9).order(ByteOrder.BIG_ENDIAN)
+            buf.putFloat(w)
+            buf.putFloat(h)
+            buf.put(if (authRequired) 1 else 0)
+            return Message(MessageType.HANDSHAKE_REPLY, buf.array())
+        }
+
+        fun auth(login: String, password: String): Message {
+            return Message(MessageType.AUTH, "$login:$password".toByteArray())
+        }
+
+        fun authResult(success: Boolean): Message {
+            return Message(MessageType.AUTH_RESULT, byteArrayOf(if (success) 1 else 0))
+        }
 
         fun keepAlive() = Message(MessageType.KEEP_ALIVE, ByteArray(0))
 

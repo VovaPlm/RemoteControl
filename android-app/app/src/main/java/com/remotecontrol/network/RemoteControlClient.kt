@@ -33,10 +33,18 @@ class RemoteControlClient(
     var onHandshakeReply: (() -> Unit)? = null
     var onScreenInfo: ((Float, Float) -> Unit)? = null
     var onKeepAlive: (() -> Unit)? = null
+    var onAuthResult: ((Boolean) -> Unit)? = null
+
+    private var pendingScreenW = 0f
+    private var pendingScreenH = 0f
+    private var authLogin = ""
+    private var authPassword = ""
 
     val isConnected: Boolean get() = socket?.isConnected == true && !socket!!.isClosed
 
-    fun connect(host: String, port: Int) {
+    fun connect(host: String, port: Int, login: String = "", password: String = "") {
+        authLogin = login
+        authPassword = password
         readJob = scope.launch {
             try {
                 val sock = Socket()
@@ -47,7 +55,6 @@ class RemoteControlClient(
                 outputStream = sock.getOutputStream()
 
                 send(Message.handshake())
-                onConnected?.invoke()
 
                 startKeepAlive()
                 readLoop()
@@ -98,13 +105,30 @@ class RemoteControlClient(
             MessageType.VIDEO_FRAME -> onVideoFrame?.invoke(msg.payload)
             MessageType.HANDSHAKE -> send(Message.handshakeReply())
             MessageType.HANDSHAKE_REPLY -> {
-                if (msg.payload.size == 8) {
+                if (msg.payload.size >= 8) {
                     val bb = ByteBuffer.wrap(msg.payload).order(ByteOrder.BIG_ENDIAN)
                     val w = bb.getFloat()
                     val h = bb.getFloat()
-                    onScreenInfo?.invoke(w, h)
+                    val authReq = msg.payload.size >= 9 && bb.get() == 1.toByte()
+                    if (authReq) {
+                        pendingScreenW = w
+                        pendingScreenH = h
+                        send(Message.auth(authLogin, authPassword))
+                    } else {
+                        onScreenInfo?.invoke(w, h)
+                        onHandshakeReply?.invoke()
+                        onConnected?.invoke()
+                    }
                 }
-                onHandshakeReply?.invoke()
+            }
+            MessageType.AUTH_RESULT -> {
+                val ok = msg.payload.isNotEmpty() && msg.payload[0] == 1.toByte()
+                if (ok) {
+                    onScreenInfo?.invoke(pendingScreenW, pendingScreenH)
+                    onHandshakeReply?.invoke()
+                    onConnected?.invoke()
+                }
+                onAuthResult?.invoke(ok)
             }
             MessageType.KEEP_ALIVE -> onKeepAlive?.invoke()
             else -> {}

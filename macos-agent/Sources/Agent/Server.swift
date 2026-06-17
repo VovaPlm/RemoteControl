@@ -95,6 +95,12 @@ final class Server {
         conn.send(content: data, completion: .idempotent)
     }
 
+    func disconnect(_ id: UUID) {
+        connections[id]?.cancel()
+        connections.removeValue(forKey: id)
+        listeners.removeValue(forKey: id)
+    }
+
     func broadcast(_ message: Message) {
         let data = message.serialize()
         for (_, conn) in connections {

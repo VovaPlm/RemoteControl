@@ -53,10 +53,14 @@ fun App(viewModel: MainViewModel = viewModel()) {
         ConnectScreen(
             host = viewModel.serverHost,
             port = viewModel.serverPort,
+            login = viewModel.login,
+            password = viewModel.password,
             connectionState = viewModel.connectionState,
             errorMessage = viewModel.errorMessage,
             onHostChange = { viewModel.serverHost = it },
             onPortChange = { viewModel.serverPort = it },
+            onLoginChange = { viewModel.login = it },
+            onPasswordChange = { viewModel.password = it },
             onConnect = { viewModel.connect() }
         )
     }
