@@ -12,7 +12,6 @@ final class ServerController: ObservableObject {
     private var server: Server?
     private var screenCapture: ScreenCapture?
     private let input = InputController()
-    private var connectedClients = Set<UUID>()
     private var pendingAuth = Set<UUID>()
     private var keepAliveTimer: Timer?
 
@@ -28,17 +27,16 @@ final class ServerController: ObservableObject {
         let s = Server(port: 9090)
         s.onConnection = { [weak self] id in
             guard let self else { return }
-            self.connectedClients.insert(id)
-            DispatchQueue.main.async { self.clientCount = self.connectedClients.count }
             s.send(Message.handshake(), to: id)
+            DispatchQueue.main.async { self.clientCount += 1 }
         }
         s.onDisconnection = { [weak self] id in
             guard let self else { return }
-            self.connectedClients.remove(id)
             self.pendingAuth.remove(id)
             DispatchQueue.main.async {
-                self.clientCount = self.connectedClients.count
-                if self.connectedClients.isEmpty {
+                self.clientCount -= 1
+                if self.clientCount <= 0 {
+                    self.clientCount = 0
                     self.screenCapture?.stop()
                     self.screenCapture = nil
                 }
@@ -66,7 +64,6 @@ final class ServerController: ObservableObject {
         screenCapture = nil
         server?.stop()
         server = nil
-        connectedClients.removeAll()
         pendingAuth.removeAll()
         isRunning = false
         clientCount = 0
@@ -76,7 +73,7 @@ final class ServerController: ObservableObject {
     private func startKeepAlive() {
         keepAliveTimer?.invalidate()
         keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            guard let self, !self.connectedClients.isEmpty else { return }
+            guard let self, self.clientCount > 0 else { return }
             self.server?.broadcast(Message.keepAlive())
         }
     }
@@ -174,7 +171,7 @@ final class ServerController: ObservableObject {
         guard screenCapture == nil else { return }
         let cap = ScreenCapture()
         cap.onEncodedFrame = { [weak self] data in
-            guard let self, !self.connectedClients.isEmpty else { return }
+            guard let self, self.clientCount > 0 else { return }
             server.broadcast(Message.videoFrame(data))
         }
         cap.start()
