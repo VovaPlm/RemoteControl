@@ -1,5 +1,7 @@
 import Foundation
 import Combine
+import AppKit
+import SwiftUI
 
 final class ServerController: ObservableObject {
     @Published var isRunning = false
@@ -19,6 +21,9 @@ final class ServerController: ObservableObject {
         authEnabled = AuthManager.isAuthEnabled()
         tailscaleIP = Server.getIPAddress() ?? "N/A"
         localIP = Server.getLocalIP() ?? "N/A"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.start()
+        }
     }
 
     func start() {
@@ -180,6 +185,23 @@ final class ServerController: ObservableObject {
     }
 
     // MARK: - Auth
+
+    func showAuthWindow() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 280, height: 160),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Authentication Setup"
+        let authView = AuthSetupView(controller: self) { [weak window] in
+            window?.close()
+        }
+        window.contentView = NSHostingView(rootView: authView)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+    }
 
     func setupAuth(login: String, password: String) {
         do {

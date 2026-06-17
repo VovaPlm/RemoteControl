@@ -31,77 +31,65 @@ struct RemoteControlAgentApp: App {
 
     var body: some Scene {
         MenuBarExtra("RemoteControl Agent", systemImage: "display") {
-            VStack(alignment: .leading, spacing: 6) {
-                statusSection
-                Divider()
-                controlSection
-                Divider()
-                authSection
-                Divider()
-                infoSection
-                Divider()
-                quitSection
-            }
-            .padding(.vertical, 4)
+            MenuContentView(controller: controller)
         }
         .menuBarExtraStyle(.menu)
-
-        Window("Authentication Setup", id: "auth-setup") {
-            AuthSetupView(controller: controller)
-        }
-        .windowResizability(.contentSize)
     }
+}
 
-    @ViewBuilder
-    private var statusSection: some View {
-        HStack {
-            Circle()
-                .fill(controller.isRunning ? Color.green : Color.gray)
-                .frame(width: 8, height: 8)
-            Text(controller.statusMessage)
-                .font(.subheadline)
-        }
-        if controller.isRunning {
-            Text("Clients: \(controller.clientCount)")
-                .font(.caption).foregroundColor(.secondary)
-        }
-        HStack(spacing: 4) {
-            Text(controller.authEnabled ? "🔐" : "🔓")
-            Text(controller.authEnabled ? "Auth enabled" : "Auth disabled")
+struct MenuContentView: View {
+    @ObservedObject var controller: ServerController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Status
+            HStack {
+                Circle()
+                    .fill(controller.isRunning ? Color.green : Color.red)
+                    .frame(width: 8, height: 8)
+                Text(controller.statusMessage)
+                    .font(.subheadline)
+            }
+            if controller.isRunning {
+                Text("Clients: \(controller.clientCount)")
+                    .font(.caption).foregroundColor(.secondary)
+            }
+            HStack(spacing: 4) {
+                Text(controller.authEnabled ? "🔐" : "🔓")
+                Text(controller.authEnabled ? "Auth enabled" : "Auth disabled")
+                    .font(.caption)
+            }
+
+            Divider()
+
+            // Controls
+            if controller.isRunning {
+                Button("Stop Server") { controller.stop() }
+            } else {
+                Button("Start Server") { controller.start() }
+            }
+
+            Divider()
+
+            // Auth
+            Button("Setup Auth…") { controller.showAuthWindow() }
+            if controller.authEnabled {
+                Button("Clear Auth") { controller.clearAuth() }
+            }
+
+            Divider()
+
+            // Info
+            Text("Tailscale: \(controller.tailscaleIP)")
                 .font(.caption)
+            Text("Local: \(controller.localIP)")
+                .font(.caption)
+
+            Divider()
+
+            Button("Quit") { NSApplication.shared.terminate(nil) }
         }
-    }
-
-    @ViewBuilder
-    private var controlSection: some View {
-        if controller.isRunning {
-            Button("Stop Server") { controller.stop() }
-        } else {
-            Button("Start Server") { controller.start() }
-        }
-    }
-
-    @Environment(\.openWindow) private var openWindow
-
-    @ViewBuilder
-    private var authSection: some View {
-        Button("Setup Auth…") { openWindow(id: "auth-setup") }
-        if controller.authEnabled {
-            Button("Clear Auth") { controller.clearAuth() }
-        }
-    }
-
-    @ViewBuilder
-    private var infoSection: some View {
-        Text("Tailscale: \(controller.tailscaleIP)")
-            .font(.caption)
-        Text("Local: \(controller.localIP)")
-            .font(.caption)
-    }
-
-    @ViewBuilder
-    private var quitSection: some View {
-        Button("Quit") { NSApplication.shared.terminate(nil) }
+        .padding(.vertical, 4)
     }
 }
 
@@ -109,7 +97,7 @@ struct AuthSetupView: View {
     @ObservedObject var controller: ServerController
     @State private var login = ""
     @State private var password = ""
-    @Environment(\.dismiss) private var dismiss
+    var onClose: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -120,10 +108,10 @@ struct AuthSetupView: View {
             SecureField("Password", text: $password)
                 .textFieldStyle(.roundedBorder)
             HStack {
-                Button("Cancel") { dismiss() }
+                Button("Cancel") { onClose?() }
                 Button("Save") {
                     controller.setupAuth(login: login, password: password)
-                    dismiss()
+                    onClose?()
                 }
                 .keyboardShortcut(.defaultAction)
             }
