@@ -14,8 +14,14 @@ macos-agent/Package.resolved
 
 # General
 .DS_Store
-*.apk
-*.aab
 *.keystore
 *.log
+__pycache__/
+*.pyc
+AppIcon.iconset/
+
+# Build artifacts
+dist/
+*.apk
+*.aab
 *.app

@@ -7,13 +7,14 @@ final class InputController {
     var videoHeight: CGFloat = 1080
     private var lastAbsolutePosition = CGPoint.zero
 
-    init() {
-        requestAccessibilityPermission()
+    static var hasPermission: Bool {
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false] as CFDictionary
+        return AXIsProcessTrustedWithOptions(opts)
     }
 
-    private func requestAccessibilityPermission() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true]
-        _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+    static func requestPermission() {
+        let promptOpts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+        AXIsProcessTrustedWithOptions(promptOpts)
     }
 
     // MARK: - Mouse

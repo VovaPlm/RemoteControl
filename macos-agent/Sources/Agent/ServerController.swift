@@ -10,6 +10,8 @@ final class ServerController: ObservableObject {
     @Published var tailscaleIP = "N/A"
     @Published var localIP = "N/A"
     @Published var statusMessage = "Ready"
+    @Published var hasInputPermission = false
+    @Published var hasScreenPermission = false
 
     private var server: Server?
     private var screenCapture: ScreenCapture?
@@ -21,6 +23,8 @@ final class ServerController: ObservableObject {
         authEnabled = AuthManager.isAuthEnabled()
         tailscaleIP = Server.getIPAddress() ?? "N/A"
         localIP = Server.getLocalIP() ?? "N/A"
+        hasInputPermission = InputController.hasPermission
+        hasScreenPermission = ScreenCapture.hasPermission
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.start()
         }
@@ -187,20 +191,30 @@ final class ServerController: ObservableObject {
     // MARK: - Auth
 
     func showAuthWindow() {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 160),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Authentication Setup"
-        let authView = AuthSetupView(controller: self) { [weak window] in
-            window?.close()
-        }
-        window.contentView = NSHostingView(rootView: authView)
-        window.center()
-        window.makeKeyAndOrderFront(nil)
+        let alert = NSAlert()
+        alert.messageText = "Authentication Setup"
+        alert.informativeText = "Set login and password for remote access"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+
+        let loginField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 22))
+        loginField.placeholderString = "Login"
+        let passwordField = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 22))
+        passwordField.placeholderString = "Password"
+
+        let stack = NSStackView(frame: NSRect(x: 0, y: 0, width: 200, height: 56))
+        stack.orientation = .vertical
+        stack.spacing = 8
+        stack.addArrangedSubview(loginField)
+        stack.addArrangedSubview(passwordField)
+        alert.accessoryView = stack
+        alert.window.initialFirstResponder = loginField
+
         NSApplication.shared.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            setupAuth(login: loginField.stringValue, password: passwordField.stringValue)
+        }
     }
 
     func setupAuth(login: String, password: String) {
@@ -221,5 +235,20 @@ final class ServerController: ObservableObject {
         } catch {
             statusMessage = "Auth clear failed: \(error.localizedDescription)"
         }
+    }
+
+    // MARK: - Permissions
+
+    func refreshPermissions() {
+        hasInputPermission = InputController.hasPermission
+        hasScreenPermission = ScreenCapture.hasPermission
+    }
+
+    func requestInputPermission() {
+        InputController.requestPermission()
+    }
+
+    func requestScreenPermission() {
+        ScreenCapture.requestPermission()
     }
 }

@@ -62,6 +62,38 @@ struct MenuContentView: View {
 
             Divider()
 
+            // Permissions
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(controller.hasInputPermission ? Color.green : Color.red)
+                    .frame(width: 6, height: 6)
+                Text(controller.hasInputPermission ? "Input: allowed" : "Input: blocked")
+                    .font(.caption)
+                Spacer()
+                if !controller.hasInputPermission {
+                    Button("Grant") { controller.requestInputPermission() }
+                        .controlSize(.small)
+                }
+            }
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(controller.hasScreenPermission ? Color.green : Color.red)
+                    .frame(width: 6, height: 6)
+                Text(controller.hasScreenPermission ? "Screen: allowed" : "Screen: blocked")
+                    .font(.caption)
+                Spacer()
+                if !controller.hasScreenPermission {
+                    Button("Grant") { controller.requestScreenPermission() }
+                        .controlSize(.small)
+                }
+            }
+            if !controller.hasScreenPermission || !controller.hasInputPermission {
+                Text("Grant in System Settings, then reopen app")
+                    .font(.caption2).foregroundColor(.secondary)
+            }
+
+            Divider()
+
             // Controls
             if controller.isRunning {
                 Button("Stop Server") { controller.stop() }
@@ -87,37 +119,12 @@ struct MenuContentView: View {
 
             Divider()
 
+            Button("Refresh Permissions") { controller.refreshPermissions() }
             Button("Quit") { NSApplication.shared.terminate(nil) }
         }
         .padding(.vertical, 4)
+        .onAppear { controller.refreshPermissions() }
     }
 }
 
-struct AuthSetupView: View {
-    @ObservedObject var controller: ServerController
-    @State private var login = ""
-    @State private var password = ""
-    var onClose: (() -> Void)?
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Authentication Setup")
-                .font(.headline)
-            TextField("Login", text: $login)
-                .textFieldStyle(.roundedBorder)
-            SecureField("Password", text: $password)
-                .textFieldStyle(.roundedBorder)
-            HStack {
-                Button("Cancel") { onClose?() }
-                Button("Save") {
-                    controller.setupAuth(login: login, password: password)
-                    onClose?()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding()
-        .frame(width: 280)
-        .fixedSize()
-    }
-}
+// AuthSetupView is no longer used — AppKit-based dialog is in ServerController

@@ -6,6 +6,19 @@ import IOSurface
 import CoreMedia
 
 final class ScreenCapture {
+    static var hasPermission: Bool {
+        if #available(macOS 10.15, *) {
+            return CGPreflightScreenCaptureAccess()
+        }
+        return true
+    }
+
+    static func requestPermission() {
+        if #available(macOS 10.15, *) {
+            CGRequestScreenCaptureAccess()
+        }
+    }
+
     static func videoSize() -> CGSize {
         let bounds = CGDisplayBounds(CGMainDisplayID())
         let w = bounds.size.width
