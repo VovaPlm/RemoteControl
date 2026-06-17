@@ -108,7 +108,7 @@ final class Server {
         }
     }
 
-    func getIPAddress() -> String? {
+    static func getIPAddress() -> String? {
         var addrList: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&addrList) == 0, let list = addrList else { return nil }
         defer { freeifaddrs(addrList) }
@@ -142,7 +142,7 @@ final class Server {
         return nil
     }
 
-    func getLocalIP() -> String? {
+    static func getLocalIP() -> String? {
         var addrList: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&addrList) == 0, let list = addrList else { return nil }
         defer { freeifaddrs(addrList) }

@@ -18,3 +18,4 @@ macos-agent/Package.resolved
 *.aab
 *.keystore
 *.log
+*.app

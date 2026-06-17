@@ -23,6 +23,11 @@ Android → macOS remote desktop. Stream your Mac screen to your phone and contr
 - 🌐 Works over LAN or Tailscale
 - 📡 Bonjour auto-discovery (client-side)
 
+## Features
+
+- 🔐 **Authentication** — set login/password on the agent via CLI or GUI; Android prompts for credentials
+- 🖥️ **macOS Menu Bar app** — runs as a background service with a menu bar icon
+
 ## Building
 
 ### Prerequisites
@@ -33,6 +38,18 @@ Android → macOS remote desktop. Stream your Mac screen to your phone and contr
 
 ### macOS Agent
 
+#### Menu Bar app (GUI)
+
+```bash
+cd macos-agent
+./build-app.sh        # builds release + creates RemoteControlAgent.app
+open RemoteControlAgent.app
+```
+
+Or open the script result in Finder and drag to Applications.
+
+#### CLI (alternative)
+
 ```bash
 cd macos-agent
 swift build -c release
@@ -40,6 +57,16 @@ swift build -c release
 ```
 
 The agent listens on port `9090` and prints the IP addresses to connect to.
+
+### Authentication setup
+
+```bash
+cd macos-agent
+swift run Agent --setup-auth     # interactive: enter login + password
+swift run Agent --clear-auth     # remove credentials
+```
+
+Or use the menu bar app → **Setup Auth…**.
 
 ### Android App
 
@@ -57,13 +84,14 @@ Or open `android-app/` in Android Studio and run on device.
 
 ## Usage
 
-1. Start the macOS agent: `swift run` (from `macos-agent/`)
-2. Open the Android app, enter the agent's IP and port (default `9090`)
-3. Tap **Connect**
-4. The Mac screen appears on your phone
-5. **Tap** → click, **Drag** → move with button held
-6. Menu → **Keyboard** → opens soft keyboard for text input
-7. **Double-tap** → toggle drag mode (mouse stays held)
+1. Start the macOS agent (app or CLI)
+2. Set up authentication if desired: `swift run Agent --setup-auth`
+3. Open the Android app, enter the agent's IP, port (default `9090`), login and password
+4. Tap **Connect**
+5. The Mac screen appears on your phone
+6. **Tap** → click, **Drag** → move with button held
+7. Menu → **Keyboard** → opens soft keyboard for text input
+8. **Double-tap** → toggle drag mode (mouse stays held)
 
 ## Protocol
 
