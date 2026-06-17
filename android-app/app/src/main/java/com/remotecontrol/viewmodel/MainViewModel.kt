@@ -1,6 +1,8 @@
 package com.remotecontrol.viewmodel
 
 import android.annotation.SuppressLint
+import android.app.Application
+import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
@@ -11,7 +13,7 @@ import android.view.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import com.remotecontrol.network.RemoteControlClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +25,7 @@ enum class ConnectionState {
     DISCONNECTED, CONNECTING, CONNECTED, ERROR
 }
 
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
     var connectionState by mutableStateOf(ConnectionState.DISCONNECTED)
     var statusMessage by mutableStateOf("")
     var serverHost by mutableStateOf("")
@@ -31,6 +33,12 @@ class MainViewModel : ViewModel() {
     var errorMessage by mutableStateOf("")
     var screenWidth by mutableStateOf(1920f)
     var screenHeight by mutableStateOf(1080f)
+
+    init {
+        val prefs = getApplication<Application>().getSharedPreferences("remote_control", Context.MODE_PRIVATE)
+        serverHost = prefs.getString("host", "") ?: ""
+        serverPort = prefs.getString("port", "9090") ?: "9090"
+    }
 
     private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -45,6 +53,8 @@ class MainViewModel : ViewModel() {
             mainHandler.post { errorMessage = "Enter server address" }
             return
         }
+
+        saveServer()
 
         mainHandler.post {
             connectionState = ConnectionState.CONNECTING
@@ -89,6 +99,14 @@ class MainViewModel : ViewModel() {
         }
 
         client?.connect(serverHost.trim(), serverPort.trim().toIntOrNull() ?: 9090)
+    }
+
+    private fun saveServer() {
+        val prefs = getApplication<Application>().getSharedPreferences("remote_control", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("host", serverHost.trim())
+            .putString("port", serverPort.trim())
+            .apply()
     }
 
     fun disconnect() {
